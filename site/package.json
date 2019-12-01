@@ -1,0 +1,16 @@
+{
+  "name": "fdb",
+  "version": "1.0.0",
+  "description": "debugger interface",
+  "main": "index.js",
+  "author": "felix bowman",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^3.6.4"
+  },
+  "scripts": {
+    "build": "./node_modules/typescript/bin/tsc"
+  }
+}
