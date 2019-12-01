@@ -23,6 +23,8 @@ podcastDir = "podcasts/"
 data PodcastError
   = PodcastNotFound Name
   | MalformedXml
+  | MissingTag String
+  | MissingAttr String
   | IOWrapper IOException
   deriving (Show)
 
@@ -62,38 +64,40 @@ getPodcastUrl podcastName = case (Map.lookup podcastName podcasts) of
   Just v -> pure v
 
 xmldoc = do
-  str <- readFile "byz.xml"
+  str <- readFile "eng.xml"
   case parseXMLDoc str of
     Nothing -> error "bad"
     Just x -> pure x
 
-getMp3Links = undefined
--- getMp3Links :: Element -> PodcastResult [Podcast]
--- getMp3Links doc = case (mapM findUrlVal urlElems) of
---   Nothing -> Left MalformedXml
---   Just v -> pure $ zipWith (Podcast "") (map strContent descElems) v
---   where
---     enclosure  = QName "enclosure" Nothing Nothing
---     desc       = QName "description" Nothing Nothing
---     urlElems   = filterElementsName (\e -> (e == enclosure)) doc
---     descElems  = filterElementsName (\e -> (e == desc)) doc
---     findUrlVal = findAttr (QName "url" Nothing Nothing)
+getMp3Links :: Element -> PodcastResult [Podcast]
+getMp3Links doc = getItems doc >>= mapM getPodcastInfo
 
-getPodcastInfo :: Element -> Maybe Podcast
+xmlName :: String -> QName
+xmlName tagName = QName tagName Nothing Nothing
+
+byTag :: String -> Element -> PodcastResult Element
+byTag tagName doc = case filterElementName ((==) (xmlName tagName)) doc of
+  Just x -> pure x
+  Nothing -> Left $ MissingTag tagName
+
+attr :: String -> Element -> PodcastResult String
+attr attrName doc = case findAttr (xmlName attrName) doc of
+  Just x -> pure x
+  Nothing -> Left $ MissingAttr attrName
+
+getPodcastInfo :: Element -> PodcastResult Podcast
 getPodcastInfo doc = do
-  title <- fmap strContent $ filterElementName ((==) (xmlName "title")) doc
-  url <- filterElementName ((==) (xmlName "enclosure")) doc >>= findAttr (xmlName "url")
-  description <- fmap strContent $ filterElementName ((==) (xmlName "description")) doc
+  title <- fmap strContent $ byTag "title" doc
+  description <- fmap strContent $ byTag "description" doc
+  url <- byTag "enclosure" doc >>= attr "url"
   pure $ Podcast title description url
-  where
-    xmlName tagName = QName tagName Nothing Nothing
 
 getItems :: Element -> PodcastResult [Element]
 getItems doc = case filterElementsName isItem doc of
   [] -> Left MalformedXml
   is -> pure is
   where
-    isItem = (==) (QName "item" Nothing Nothing)
+    isItem = (==) (xmlName "item")
 
 parsePodcastDoc :: String -> PodcastResult Element
 parsePodcastDoc doc = case (parseXMLDoc doc) of
