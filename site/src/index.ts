@@ -14,6 +14,11 @@ type PodcastsState = {
   epNum: number
 }
 
+type ListenEvent = {
+  name: string,
+  epNum: number
+}
+
 async function getAll(): Promise<Array<PodcastsState>> {
   const res = await fetch(`http://localhost:3000/all`)
   return await res.json() as Array<PodcastsState>
@@ -25,13 +30,30 @@ function nameElem(n: string): HTMLElement {
   return e
 }
 
-function makeEpisode(p: Podcast): HTMLElement {
+function listenButton(epNum: number, name: String, p: Podcast): HTMLElement {
+  const b = document.createElement("button") as HTMLButtonElement
+  b.innerText = "this one"
+
+  b.onclick = async () => {
+    const listenEvent = new CustomEvent('listen', { detail: { epNum, name }})
+    document.dispatchEvent(listenEvent)
+    await fetch(`http://localhost:3000/set-ep-num/${name}/${epNum}`)
+    console.log(p.url)
+    // window.open(p.url)
+  }
+  return b
+}
+
+function makeEpisode(epNum: number, name: String, p: Podcast): HTMLElement {
   const e = document.createElement("div") as HTMLDivElement
   e.classList.add("ep")
 
   const title = document.createElement("h2")
   title.textContent = p.title
   e.appendChild(title)
+
+  const butt = listenButton(epNum, name, p)
+  e.appendChild(butt)
 
   const desc = document.createElement("p")
   desc.appendChild(htmlToElement(p.description))
@@ -40,22 +62,79 @@ function makeEpisode(p: Podcast): HTMLElement {
   return e
 }
 
-function makePodcastElement(p: PodcastsState): HTMLElement {
-  const e = document.createElement("div") as HTMLDivElement
-  e.classList.add("podcast")
+class PodcastList {
 
-  const name = nameElem(p.name)
-  e.appendChild(name)
+  elem: HTMLElement
+  elems: Array<HTMLElement>
+  selected: HTMLElement
 
-  p.eps.map(makeEpisode).forEach(ep => e.appendChild(ep))
+  constructor(state: PodcastsState) {
+    this.elems = state.eps.map((ep, idx) => makeEpisode(idx, state.name, ep))
+    this.selected = this.elems[state.epNum]
+    this.selected.classList.add("selectedEp")
 
-  return e
+    this.elem = this.html(state)
+  }
+
+  select(n: number) {
+    this.selected.classList.remove("selectedEp")
+    this.selected = this.elems[n]
+    this.selected.classList.add("selectedEp")
+  }
+
+  html(p: PodcastsState): HTMLElement {
+    const e = document.createElement("div") as HTMLDivElement
+    e.classList.add("podcast")
+
+    const name = nameElem(p.name)
+    e.appendChild(name)
+
+    const b = document.createElement("button") as HTMLButtonElement
+    b.innerText = "scroll to now"
+
+    b.onclick = () => {
+      this.selected.scrollIntoView()
+    }
+    e.appendChild(b)
+
+    this.elems.forEach(ep => e.appendChild(ep))
+
+    return e
+  }
+
+}
+
+class PodcastPage {
+  
+  podcasts: Map<string, PodcastList> = new Map()
+  elem: HTMLElement
+
+  constructor(state: Array<PodcastsState>) {
+    state.forEach(p => this.podcasts.set(p.name, new PodcastList(p)))
+    document.addEventListener('listen', this.onListen as EventListener)
+    this.elem = this.html()
+  }
+
+  onListen = (e: CustomEvent<ListenEvent>) => {
+    const list = this.podcasts.get(e.detail.name)
+    if (list) {
+      list.select(e.detail.epNum)
+    }
+  }
+
+  html(): HTMLElement {
+    const e = document.createElement("div") as HTMLDivElement
+    e.classList.add("page")
+    Array.from(this.podcasts.values()).forEach(v => e.appendChild(v.elem))
+    return e
+  }
+
 }
 
 async function go(): Promise<void> {
   const ps = await getAll()
-  const e = document.getElementById("here") as HTMLDivElement
-  ps.map(makePodcastElement).forEach(p => e.appendChild(p))
+  const page = new PodcastPage(ps)
+  document.body.appendChild(page.elem)
 }
 
 go()
@@ -64,45 +143,5 @@ function htmlToElement(html: string): HTMLElement {
   const template = document.createElement('template')
   html = html.trim()
   template.innerHTML = html
-  return template.content as HTMLElement
+  return template.content.firstChild as HTMLElement
 }
-
-// function appendPodcast(p: Podcast, t: HTMLTableElement): void {
-//   const row = t.insertRow(-1)
-//   const nameCell = row.insertCell(0)
-//   const epNumCell = row.insertCell(1)
-//   const listenCell = row.insertCell(2)
-//   const nextEpCell = row.insertCell(3)
-//   nameCell.appendChild(document.createTextNode(p.name))
-//   epNumCell.appendChild(document.createTextNode(p.epNum.toString()))
-//   listenCell.appendChild(listenButton(p))
-//   nextEpCell.appendChild(nextEpButton(p))
-// }
-// 
-// function listenButton(p: Podcast): HTMLButtonElement {
-//   const b = document.createElement("button") as HTMLButtonElement
-//   b.innerText = "listen"
-//   b.onclick = async () => {
-//     const res = await fetch(`http://localhost:3000/start/${p.name}`)
-//     const url = await res.text()
-//     window.open(url)
-//   }
-//   return b
-// }
-// 
-// function nextEpButton(p: Podcast): HTMLButtonElement {
-//   const b = document.createElement("button") as HTMLButtonElement
-//   b.innerText = "next ep"
-//   b.onclick = async () => {
-//     const res = await fetch(`http://localhost:3000/inc/${p.name}`)
-//     const url = await res.text()
-//     window.location.reload(true)
-//   }
-//   return b
-// }
-// 
-// async function loadAll() {
-//   const res = await fetch(`http://localhost:3000/all`)
-//   const body = await res.json() as Array<Podcast>
-//   body.forEach(p => appendPodcast(p, table))
-// }

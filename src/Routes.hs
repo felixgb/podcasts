@@ -14,6 +14,7 @@ route = scotty 3000 $ do
     eps <- liftIO numberedEps
     json eps
 
-  get "/inc/:type" $ do
-    ty <- param "type"
-    liftIO $ incEpNum ty
+  get "/set-ep-num/:podname/:num" $ do
+    podname <- param "podname"
+    num <- param "num"
+    liftIO $ setEpNum podname num

@@ -49,6 +49,8 @@ podcasts :: [(String, String)]
 podcasts =
   [ ("eng", "http://historyofenglishpodcast.com/feed/podcast/" )
   , ("byz", "https://rss.acast.com/thehistoryofbyzantium")
+  -- , ("iot", "https://podcasts.files.bbci.co.uk/b006qykl.rss")
+  , ("enghist", "https://historyofenglishpodcast.com/feed/podcast/")
   ]
 
 requestPodcast :: String -> IO String
@@ -63,7 +65,7 @@ getPodcastUrl podcastName = case (lookup podcastName podcasts) of
   Just v -> pure v
 
 getMp3Links :: Element -> PodcastResult [Podcast]
-getMp3Links doc = getItems doc >>= mapM getPodcastInfo
+getMp3Links doc = getItems doc >>= mapM getPodcastInfo >>= pure . reverse
 
 xmlName :: String -> QName
 xmlName tagName = QName tagName Nothing Nothing
@@ -107,10 +109,8 @@ getMp3sForPodcast podcastName = do
 getEpNumber :: String -> IO Int
 getEpNumber = fmap read . readFile . (++) podcastDir
 
-incEpNum :: String -> IO ()
-incEpNum podcastName = do
-  !num <- getEpNumber podcastName
-  writeFile (podcastDir ++ podcastName) (show $ num + 1)
+setEpNum :: String -> Int -> IO ()
+setEpNum podcastName num = writeFile (podcastDir ++ podcastName) (show num)
 
 numberedEps :: IO [PodcastsState]
 numberedEps = sequence $ parMap rseq namedGet podcasts

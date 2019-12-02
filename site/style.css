@@ -1,6 +1,12 @@
-#here {
+body {
+  background-color: #1d2021;
+  color: #fbf1c7;
+}
+
+.page {
   display: flex;
   align-items: flex-start;
+  flex-grow: 1;
 }
 
 .podcast {
@@ -13,5 +19,10 @@
 .ep {
   margin: 5px;
   padding: 5px;
-  border: 1px solid black;
+  border: 3px solid #458588;
+}
+
+.selectedEp {
+  background-color: #fbf1c7;
+  color: #1d2021;
 }
