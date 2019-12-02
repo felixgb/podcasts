@@ -30,6 +30,7 @@ dependencies:
 - http-conduit
 - bytestring
 - aeson
+- parallel
 - transformers
 
 library:

@@ -1,27 +1,24 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Model where
 
 import Control.Exception
-import Data.Text (Text, unpack)
 import Network.HTTP.Conduit
 import Text.XML.Light.Input
 import Text.XML.Light.Proc
 import Text.XML.Light.Types
 import qualified Data.ByteString.Lazy.Char8 as Char8
-import qualified Data.Map.Strict as Map
 import GHC.Generics
 import Data.Aeson
+import Control.Parallel.Strategies
 
 podcastDir :: String
 podcastDir = "podcasts/"
 
 data PodcastError
-  = PodcastNotFound Name
+  = PodcastNotFound String
   | MalformedXml
   | MissingTag String
   | MissingAttr String
@@ -30,44 +27,40 @@ data PodcastError
 
 instance Exception PodcastError
 
-data PodcastState = PodcastState
-  { name :: Text
-  , epNum :: Int
-  } deriving (Generic, ToJSON, FromJSON)
-
 data Podcast = Podcast
   { title :: String
   , description :: String
   , url :: String
   } deriving (Show, Generic, ToJSON, FromJSON)
 
-type Name = Text
-type Podcasts = Map.Map Name String
+data PodcastsState = PodcastsState
+  { eps :: [Podcast]
+  , name :: String
+  , epNum :: Int
+  } deriving (Show, Generic, ToJSON, FromJSON)
+
 type PodcastResult = Either PodcastError
 
 liftEither :: Either PodcastError a -> IO a
 liftEither (Right a) = pure a
 liftEither (Left a) = throw a
 
-podcasts :: Podcasts
-podcasts = Map.fromList
+podcasts :: [(String, String)]
+podcasts =
   [ ("eng", "http://historyofenglishpodcast.com/feed/podcast/" )
   , ("byz", "https://rss.acast.com/thehistoryofbyzantium")
   ]
 
 requestPodcast :: String -> IO String
-requestPodcast url = fmap (Char8.unpack) (simpleHttp url)
+-- requestPodcast url = fmap (Char8.unpack) (simpleHttp url)
+requestPodcast url = readFile (name ++ ".xml")
+  where
+    Just name = lookup url [(v, k) | (k, v) <- podcasts]
 
-getPodcastUrl :: Text -> PodcastResult String
-getPodcastUrl podcastName = case (Map.lookup podcastName podcasts) of
+getPodcastUrl :: String -> PodcastResult String
+getPodcastUrl podcastName = case (lookup podcastName podcasts) of
   Nothing -> Left $ PodcastNotFound podcastName
   Just v -> pure v
-
-xmldoc = do
-  str <- readFile "eng.xml"
-  case parseXMLDoc str of
-    Nothing -> error "bad"
-    Just x -> pure x
 
 getMp3Links :: Element -> PodcastResult [Podcast]
 getMp3Links doc = getItems doc >>= mapM getPodcastInfo
@@ -104,31 +97,25 @@ parsePodcastDoc doc = case (parseXMLDoc doc) of
   Nothing -> Left MalformedXml
   Just x -> pure x
 
-getMp3sForPodcast :: Text -> IO [Podcast]
+getMp3sForPodcast :: String -> IO [Podcast]
 getMp3sForPodcast podcastName = do
   url <- liftEither $ getPodcastUrl podcastName
   body <- requestPodcast url
   doc <- liftEither $ parsePodcastDoc body
   liftEither $ getMp3Links doc
 
-getEpNumber :: Text -> IO Int
-getEpNumber = fmap read . readFile . (++) podcastDir . unpack
+getEpNumber :: String -> IO Int
+getEpNumber = fmap read . readFile . (++) podcastDir
 
-listEpNums :: IO [PodcastState]
-listEpNums = mapM readPair (Map.toList podcasts)
-  where
-    readPair (k, _) = do
-      n <- (getEpNumber k)
-      pure (PodcastState k n)
-
-incEpNum :: Text -> IO ()
+incEpNum :: String -> IO ()
 incEpNum podcastName = do
   !num <- getEpNumber podcastName
-  writeFile (podcastDir ++ unpack podcastName) (show $ num + 1)
+  writeFile (podcastDir ++ podcastName) (show $ num + 1)
 
-podcast :: Text -> IO Podcast
-podcast podcastName = do
-  links <- getMp3sForPodcast podcastName
-  num <- getEpNumber podcastName
-  pure $ links !! ((length links) - num)
-
+numberedEps :: IO [PodcastsState]
+numberedEps = sequence $ parMap rseq namedGet podcasts
+  where
+    namedGet (name, _) = do
+      eps <- getMp3sForPodcast name
+      epNum <- getEpNumber name
+      pure $ PodcastsState eps name epNum

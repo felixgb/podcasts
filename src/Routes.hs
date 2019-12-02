@@ -11,13 +11,8 @@ route :: IO ()
 route = scotty 3000 $ do
 
   get "/all" $ do
-    eps <- liftIO listEpNums
+    eps <- liftIO numberedEps
     json eps
-
-  get "/start/:type" $ do
-    ty <- param "type"
-    pod <- liftIO $ podcast ty
-    json pod
 
   get "/inc/:type" $ do
     ty <- param "type"

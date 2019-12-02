@@ -1,0 +1,17 @@
+#here {
+  display: flex;
+  align-items: flex-start;
+}
+
+.podcast {
+  margin: 5px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ep {
+  margin: 5px;
+  padding: 5px;
+  border: 1px solid black;
+}
