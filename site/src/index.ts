@@ -1,6 +1,7 @@
-import { haha } from "./lol.js"
-
 console.log('hello')
+
+const server = window.location.host || "localhost:3000"
+console.log(server)
 
 type Podcast = {
   title: string,
@@ -20,7 +21,7 @@ type ListenEvent = {
 }
 
 async function getAll(): Promise<Array<PodcastsState>> {
-  const res = await fetch(`http://localhost:3000/all`)
+  const res = await fetch(`http://${server}/all`)
   return await res.json() as Array<PodcastsState>
 }
 
@@ -37,9 +38,8 @@ function listenButton(epNum: number, name: String, p: Podcast): HTMLElement {
   b.onclick = async () => {
     const listenEvent = new CustomEvent('listen', { detail: { epNum, name }})
     document.dispatchEvent(listenEvent)
-    await fetch(`http://localhost:3000/set-ep-num/${name}/${epNum}`)
-    console.log(p.url)
-    // window.open(p.url)
+    await fetch(`http://${server}/set-ep-num/${name}/${epNum}`)
+    window.open(p.url)
   }
   return b
 }

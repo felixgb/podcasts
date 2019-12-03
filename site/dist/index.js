@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,9 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 console.log('hello');
+const server = window.location.host || "localhost:3000";
+console.log(server);
 function getAll() {
     return __awaiter(this, void 0, void 0, function* () {
-        const res = yield fetch(`http://localhost:3000/all`);
+        const res = yield fetch(`http://${server}/all`);
         return yield res.json();
     });
 }
@@ -25,9 +28,8 @@ function listenButton(epNum, name, p) {
     b.onclick = () => __awaiter(this, void 0, void 0, function* () {
         const listenEvent = new CustomEvent('listen', { detail: { epNum, name } });
         document.dispatchEvent(listenEvent);
-        yield fetch(`http://localhost:3000/set-ep-num/${name}/${epNum}`);
-        console.log(p.url);
-        // window.open(p.url)
+        yield fetch(`http://${server}/set-ep-num/${name}/${epNum}`);
+        window.open(p.url);
     });
     return b;
 }

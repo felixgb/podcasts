@@ -1,0 +1,11 @@
+version: "3.2"
+
+services:
+  backend1:
+    image:
+  site1:
+    image: site
+    links:
+      - backend1
+    ports:
+      - "8080:80"
