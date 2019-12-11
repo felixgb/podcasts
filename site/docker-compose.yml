@@ -2,10 +2,10 @@ version: "3.2"
 
 services:
   backend1:
-    image:
+    image: podcast-api
+    entrypoint: /root/.cabal/bin/podcast-service-exe
+
   site1:
     image: site
-    links:
-      - backend1
     ports:
       - "8080:80"

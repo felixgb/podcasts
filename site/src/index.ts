@@ -21,7 +21,7 @@ type ListenEvent = {
 }
 
 async function getAll(): Promise<Array<PodcastsState>> {
-  const res = await fetch(`http://${server}/all`)
+  const res = await fetch(`http://${server}/api/all`)
   return await res.json() as Array<PodcastsState>
 }
 
@@ -38,7 +38,7 @@ function listenButton(epNum: number, name: String, p: Podcast): HTMLElement {
   b.onclick = async () => {
     const listenEvent = new CustomEvent('listen', { detail: { epNum, name }})
     document.dispatchEvent(listenEvent)
-    await fetch(`http://${server}/set-ep-num/${name}/${epNum}`)
+    await fetch(`http://${server}/api/set-ep-num/${name}/${epNum}`)
     window.open(p.url)
   }
   return b
@@ -56,7 +56,10 @@ function makeEpisode(epNum: number, name: String, p: Podcast): HTMLElement {
   e.appendChild(butt)
 
   const desc = document.createElement("p")
-  desc.appendChild(htmlToElement(p.description))
+  const descText = htmlToElement(p.description)
+  if (descText !== null) {
+    desc.appendChild(descText)
+  }
   e.appendChild(desc)
 
   return e
@@ -143,5 +146,16 @@ function htmlToElement(html: string): HTMLElement {
   const template = document.createElement('template')
   html = html.trim()
   template.innerHTML = html
+  console.log(template.content)
+  console.log(template.content.firstChild)
   return template.content.firstChild as HTMLElement
 }
+// 
+// function stripClasses(e: HTMLElement) {
+//   e.className = ''
+//   console.log(e)
+//   Array.from(e.children).forEach(p => {
+//     console.log(p)
+//     stripClasses(p)
+//   })
+// }

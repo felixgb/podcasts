@@ -44,7 +44,13 @@ executables:
     - -Wall
     - -threaded
     - -rtsopts
+    - -static
     - -with-rtsopts=-N
+    cc-options:
+    - -static
+    ld-options:
+    - -static
+    - -pthread
     dependencies:
     - podcast-service
 

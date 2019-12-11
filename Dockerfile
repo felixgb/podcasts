@@ -1,5 +1,13 @@
-FROM haskell:8
+FROM haskell:8.2.2
 
-COPY . .
+COPY podcast-service.cabal podcast-service.cabal
 
-RUN stack build
+RUN cabal update 
+RUN cabal install --only-dependencies -j4
+
+COPY src src
+COPY app app
+COPY test test
+COPY LICENSE LICENSE
+
+RUN cabal install

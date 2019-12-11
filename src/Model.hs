@@ -1,21 +1,20 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE BangPatterns #-}
 
 module Model where
 
 import Control.Exception
+import Control.Parallel.Strategies
+import Data.Aeson
+import GHC.Generics
 import Network.HTTP.Conduit
+import System.Environment
 import Text.XML.Light.Input
 import Text.XML.Light.Proc
 import Text.XML.Light.Types
 import qualified Data.ByteString.Lazy.Char8 as Char8
-import GHC.Generics
-import Data.Aeson
-import Control.Parallel.Strategies
-
-podcastDir :: String
-podcastDir = "podcasts/"
 
 data PodcastError
   = PodcastNotFound String
@@ -49,15 +48,12 @@ podcasts :: [(String, String)]
 podcasts =
   [ ("eng", "http://historyofenglishpodcast.com/feed/podcast/" )
   , ("byz", "https://rss.acast.com/thehistoryofbyzantium")
+  , ("pal", "http://palaeocast.libsyn.com/rss")
   -- , ("iot", "https://podcasts.files.bbci.co.uk/b006qykl.rss")
-  , ("enghist", "https://historyofenglishpodcast.com/feed/podcast/")
   ]
 
 requestPodcast :: String -> IO String
--- requestPodcast url = fmap (Char8.unpack) (simpleHttp url)
-requestPodcast url = readFile (name ++ ".xml")
-  where
-    Just name = lookup url [(v, k) | (k, v) <- podcasts]
+requestPodcast url = fmap (Char8.unpack) (simpleHttp url)
 
 getPodcastUrl :: String -> PodcastResult String
 getPodcastUrl podcastName = case (lookup podcastName podcasts) of
@@ -107,10 +103,15 @@ getMp3sForPodcast podcastName = do
   liftEither $ getMp3Links doc
 
 getEpNumber :: String -> IO Int
-getEpNumber = fmap read . readFile . (++) podcastDir
+getEpNumber name = do
+  let dir = podcastDir ++ name
+  ep <- (catch (readFile dir) (\(_ :: IOException) -> pure "0"))
+  pure (read ep)
 
 setEpNum :: String -> Int -> IO ()
-setEpNum podcastName num = writeFile (podcastDir ++ podcastName) (show num)
+setEpNum podcastName num = do
+  dir <- getEnv "PODCAST_DIR"
+  writeFile (dir ++ "/" ++ podcastName) (show num)
 
 numberedEps :: IO [PodcastsState]
 numberedEps = sequence $ parMap rseq namedGet podcasts

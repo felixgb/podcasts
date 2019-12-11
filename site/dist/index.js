@@ -13,7 +13,7 @@ const server = window.location.host || "localhost:3000";
 console.log(server);
 function getAll() {
     return __awaiter(this, void 0, void 0, function* () {
-        const res = yield fetch(`http://${server}/all`);
+        const res = yield fetch(`http://${server}/api/all`);
         return yield res.json();
     });
 }
@@ -28,7 +28,7 @@ function listenButton(epNum, name, p) {
     b.onclick = () => __awaiter(this, void 0, void 0, function* () {
         const listenEvent = new CustomEvent('listen', { detail: { epNum, name } });
         document.dispatchEvent(listenEvent);
-        yield fetch(`http://${server}/set-ep-num/${name}/${epNum}`);
+        yield fetch(`http://${server}/api/set-ep-num/${name}/${epNum}`);
         window.open(p.url);
     });
     return b;
@@ -42,7 +42,10 @@ function makeEpisode(epNum, name, p) {
     const butt = listenButton(epNum, name, p);
     e.appendChild(butt);
     const desc = document.createElement("p");
-    desc.appendChild(htmlToElement(p.description));
+    const descText = htmlToElement(p.description);
+    if (descText !== null) {
+        desc.appendChild(descText);
+    }
     e.appendChild(desc);
     return e;
 }
@@ -105,5 +108,16 @@ function htmlToElement(html) {
     const template = document.createElement('template');
     html = html.trim();
     template.innerHTML = html;
+    console.log(template.content);
+    console.log(template.content.firstChild);
     return template.content.firstChild;
 }
+// 
+// function stripClasses(e: HTMLElement) {
+//   e.className = ''
+//   console.log(e)
+//   Array.from(e.children).forEach(p => {
+//     console.log(p)
+//     stripClasses(p)
+//   })
+// }
