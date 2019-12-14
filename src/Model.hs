@@ -102,16 +102,21 @@ getMp3sForPodcast podcastName = do
   doc <- liftEither $ parsePodcastDoc body
   liftEither $ getMp3Links doc
 
+podcastDir :: String -> IO String
+podcastDir name = do
+  dir <- getEnv "PODCAST_DIR"
+  pure (dir ++ "/" ++ name)
+
 getEpNumber :: String -> IO Int
 getEpNumber name = do
-  let dir = podcastDir ++ name
-  ep <- (catch (readFile dir) (\(_ :: IOException) -> pure "0"))
+  path <- podcastDir name
+  ep <- (catch (readFile path) (\(_ :: IOException) -> pure "0"))
   pure (read ep)
 
 setEpNum :: String -> Int -> IO ()
 setEpNum podcastName num = do
-  dir <- getEnv "PODCAST_DIR"
-  writeFile (dir ++ "/" ++ podcastName) (show num)
+  path <- podcastDir podcastName
+  writeFile path (show num)
 
 numberedEps :: IO [PodcastsState]
 numberedEps = sequence $ parMap rseq namedGet podcasts
